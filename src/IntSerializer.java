@@ -1,5 +1,5 @@
 public class IntSerializer implements Serializer<Integer> {
-    public static final IntSerializer INSTANCE = new IntSerializer();
+    private static final IntSerializer INSTANCE = new IntSerializer();
 
     @Override
     public int serialize() {
@@ -9,5 +9,10 @@ public class IntSerializer implements Serializer<Integer> {
     @Override
     public Integer load() {
         return 69;
+    }
+
+    @SerializerInstance
+    public static IntSerializer getInstance() {
+        return INSTANCE;
     }
 }
