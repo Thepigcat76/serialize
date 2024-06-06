@@ -3,7 +3,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Map;
-import java.util.Stack;
 
 public class Main {
     public static final Map<Class<?>, Class<? extends Serializer<?>>> DEFAULT_SERIALIZER = Map.of(
@@ -40,7 +39,7 @@ public class Main {
                 }
                 System.out.println("serializer: " + serializer);
                 System.out.println("Field: " + field.getName() + " is serialized");
-                int i = (int) field.get(test);
+                Object i = field.get(test);
                 System.out.println(i);
             }
         }
@@ -76,6 +75,13 @@ public class Main {
                 }
             }
         }
+
+        if (instanceMethod == null) {
+            throw new RuntimeException("Class: `"
+                    + serializerClass.getName()
+                    + "` does not have an instance getter method. Your serializer class needs a public, static method that will return a singleton instance of your Serializer. This method also needs to be annotated with `@SerializerInstance` and have the class as its return type");
+        }
+
         return instanceMethod;
     }
 }
