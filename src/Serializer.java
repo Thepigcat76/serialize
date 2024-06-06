@@ -1,3 +1,4 @@
-public interface Serializable<T> {
-
+public interface Serializer<T> {
+    int serialize();
+    T load();
 }
