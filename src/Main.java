@@ -2,7 +2,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Main {
     public static final Map<Class<?>, Class<? extends Serializer<?>>> DEFAULT_SERIALIZER = Map.of(
@@ -10,9 +11,16 @@ public class Main {
     );
 
     public static void main(String[] args) throws Exception {
-        Test test = new Test();
+        try (Test test = new Test()) {
+            System.out.println(test.x);
+            Scanner scanner = new Scanner(System.in);
+            test.x = scanner.nextInt();
+            System.out.println(test.x);
+        }
+    }
 
-        Field[] fields = Test.class.getDeclaredFields();
+    public static void save(Test instance) throws Exception {
+        Field[] fields = instance.getClass().getDeclaredFields();
         for (Field field : fields) {
             if (field.isAnnotationPresent(Serialized.class)) {
                 Serialized serialized = field.getAnnotation(Serialized.class);
@@ -37,10 +45,21 @@ public class Main {
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     throw new RuntimeException(e);
                 }
-                System.out.println("serializer: " + serializer);
-                System.out.println("Field: " + field.getName() + " is serialized");
-                Object i = field.get(test);
-                System.out.println(i);
+                int i = field.getInt(instance);
+                DataManager.INSTANCE.save(field.getName(), i);
+            }
+        }
+    }
+
+    public static void load(Test instance) throws IllegalAccessException {
+        Map<String, Integer> loaded = DataManager.INSTANCE.load();
+        Class<? extends Test> testClass = instance.getClass();
+        Field[] fields = testClass.getDeclaredFields();
+        for (Field field : fields) {
+            for (String loadedFieldName : loaded.keySet()) {
+                if (Objects.equals(loadedFieldName, field.getName())) {
+                    field.setInt(instance, loaded.get(loadedFieldName));
+                }
             }
         }
     }

@@ -1,13 +1,19 @@
-public class Test {
+public class Test implements AutoCloseable {
     @Serialized
     public int x;
-
-    @Serialized(SubClassSerializer.class)
     public SubClass y;
 
     public Test() {
-        this.x = 69;
-        this.y = new SubClass();
+        try {
+            Main.load(this);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void close() throws Exception {
+        Main.save(this);
     }
 
     public static class SubClass {
