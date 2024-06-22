@@ -1,5 +1,10 @@
-public class IntSerializer implements Serializer<Integer> {
-    private static final IntSerializer INSTANCE = new IntSerializer();
+@AutoRegisterSerializer
+public class IntSerializer extends Serializer<Integer> {
+    private static final IntSerializer INSTANCE = new IntSerializer(new Test.SubClassSerializer[]{Test.SubClassSerializer.INSTANCE});
+
+    public IntSerializer(Serializer<?>[] subSerializer) {
+        super(subSerializer);
+    }
 
     @Override
     public int serialize() {
