@@ -21,8 +21,12 @@ public class Test implements AutoCloseable {
         private int a;
     }
 
-    public static class SubClassSerializer implements Serializer<SubClass> {
-        public static final SubClassSerializer INSTANCE = new SubClassSerializer();
+    public static class SubClassSerializer extends Serializer<SubClass> {
+        public static final SubClassSerializer INSTANCE = new SubClassSerializer(new Serializer[]{});
+
+        public SubClassSerializer(Serializer<?>[] subSerializer) {
+            super(subSerializer);
+        }
 
         @Override
         public int serialize() {
