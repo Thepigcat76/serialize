@@ -1,7 +1,7 @@
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +26,8 @@ public class DataManager {
 
     public void save(String id, int val) {
         try {
-            FileWriter writer = new FileWriter(this.file);
-            writer.write(id + "\n" + val);
+            FileWriter writer = new FileWriter(this.file, true);
+            writer.write(id + "\n" + val+"\n");
             writer.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -43,9 +43,16 @@ public class DataManager {
                 String nextLine = lines.get(i+1);
                 loaded.put(line, Integer.parseInt(nextLine));
             }
+            try {
+                FileWriter writer = new FileWriter(file);
+                writer.write("");
+                writer.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             return loaded;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (IOException _) {
         }
+        return Collections.emptyMap();
     }
 }

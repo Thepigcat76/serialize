@@ -6,16 +6,30 @@ import java.util.*;
 
 public class Main {
     public static final Map<Class<?>, Class<? extends Serializer<?>>> DEFAULT_SERIALIZER = Map.of(
-            int.class, IntSerializer.class
+            int.class, IntSerializer.class,
+            Test.SubClass.class, Test.SubClassSerializer.class
     );
 
     public static void main(String[] args) throws Exception {
         try (Test test = new Test()) {
-            System.out.println(test.x);
-            Scanner scanner = new Scanner(System.in);
-            test.x = scanner.nextInt();
-            System.out.println(test.x);
+            setFields(test);
         }
+    }
+
+    private static void setFields(Test test) {
+        System.out.println("Old: " + test.x);
+        Scanner scanner = new Scanner(System.in);
+        test.x = scanner.nextInt();
+        System.out.println("New: " + test.x);
+        System.out.println("-----");
+        System.out.println("Old: " + test.y);
+        test.y = scanner.nextInt();
+        System.out.println("New: " + test.y);
+        System.out.println("-----");
+        System.out.println("Old: " + test.z);
+        test.z = scanner.nextInt();
+        System.out.println("New: " + test.z);
+        System.out.println("-----");
     }
 
     public static void save(Test instance) throws Exception {
@@ -52,6 +66,7 @@ public class Main {
 
     public static void load(Test instance) throws IllegalAccessException {
         Map<String, Integer> loaded = DataManager.INSTANCE.load();
+        System.out.println(loaded);
         Class<? extends Test> testClass = instance.getClass();
         Field[] fields = testClass.getDeclaredFields();
         for (Field field : fields) {

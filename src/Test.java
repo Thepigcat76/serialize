@@ -1,7 +1,10 @@
 public class Test implements AutoCloseable {
     @Serialized
     public int x;
-    public SubClass y;
+    @Serialized
+    public int y;
+    @Serialized
+    public int z;
 
     public Test() {
         try {
