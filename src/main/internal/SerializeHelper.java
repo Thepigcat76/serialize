@@ -1,37 +1,19 @@
+package main.internal;
+
+import main.Main;
+import main.api.Serializer;
+import main.api.annotations.Serialized;
+import main.api.annotations.SerializerInstance;
+import main.examples.Test;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.Map;
+import java.util.Objects;
 
-public class Main {
-    public static final Map<Class<?>, Class<? extends Serializer<?>>> DEFAULT_SERIALIZER = Map.of(
-            int.class, IntSerializer.class,
-            Test.SubClass.class, Test.SubClassSerializer.class
-    );
-
-    public static void main(String[] args) throws Exception {
-        try (Test test = new Test()) {
-            setFields(test);
-        }
-    }
-
-    private static void setFields(Test test) {
-        System.out.println("Old: " + test.x);
-        Scanner scanner = new Scanner(System.in);
-        test.x = scanner.nextInt();
-        System.out.println("New: " + test.x);
-        System.out.println("-----");
-        System.out.println("Old: " + test.y);
-        test.y = scanner.nextInt();
-        System.out.println("New: " + test.y);
-        System.out.println("-----");
-        System.out.println("Old: " + test.z);
-        test.z = scanner.nextInt();
-        System.out.println("New: " + test.z);
-        System.out.println("-----");
-    }
-
+public class SerializeHelper {
     public static void save(Test instance) throws Exception {
         Field[] fields = instance.getClass().getDeclaredFields();
         for (Field field : fields) {
@@ -68,7 +50,7 @@ public class Main {
     }
 
     private static Class<? extends Serializer<?>> findDefaultSerializer(Field field) throws Exception {
-        Class<? extends Serializer<?>> serializer = DEFAULT_SERIALIZER.get(field.getType());
+        Class<? extends Serializer<?>> serializer = Main.DEFAULT_SERIALIZER.get(field.getType());
         if (serializer != null)
             return serializer;
         else
@@ -79,18 +61,29 @@ public class Main {
         return new Exception("Could not get default serializer for type: " + field.getType().getTypeName() + ". Please provide a serializer manually by passing it to the annotation");
     }
 
-    public static void load(Test instance) throws IllegalAccessException {
+    public static void load(Test instance) {
         Map<String, Integer> loaded = DataManager.INSTANCE.load();
         System.out.println(loaded);
         Class<? extends Test> testClass = instance.getClass();
         Field[] fields = testClass.getDeclaredFields();
-        for (Field field : fields) {
-            for (String loadedFieldName : loaded.keySet()) {
-                if (Objects.equals(loadedFieldName, field.getName())) {
-                    field.setInt(instance, loaded.get(loadedFieldName));
-                }
-            }
-        }
+        for (Field field : fields)
+            for (String loadedFieldName : loaded.keySet())
+                if (Objects.equals(loadedFieldName, field.getName()))
+                    if (isNotFinal(field))
+                        try {
+                            field.setInt(instance, loaded.get(loadedFieldName));
+                        } catch (IllegalAccessException e) {
+                            throw new RuntimeException(e);
+                        }
+                    else throw fieldIsFinalError(field);
+    }
+
+    private static IllegalAccessError fieldIsFinalError(Field field) {
+        return new IllegalAccessError("Field: "+field.getName()+" has the final modifier, meaning the saved data cannot be loaded.");
+    }
+
+    private static boolean isNotFinal(Field field) {
+        return !Modifier.isFinal(field.getModifiers());
     }
 
     private static Method getInstanceMethod(Class<? extends Serializer<?>> serializerClass) throws Exception {
@@ -98,12 +91,12 @@ public class Main {
         Method instanceMethod = null;
         for (Method method : methods) {
             if (method.isAnnotationPresent(SerializerInstance.class)) {
-                if (!Modifier.isStatic(method.getModifiers())) {
+                if (!Modifier.isStatic(method.getModifiers()))
                     throw instanceMethodNotStatic(method);
-                }
-                if (method.getReturnType() != serializerClass) {
+
+                if (method.getReturnType() != serializerClass)
                     throw incorrectReturnTypeException(serializerClass, method);
-                }
+
                 if (instanceMethod == null) {
                     instanceMethod = method;
                 } else {
@@ -112,9 +105,8 @@ public class Main {
             }
         }
 
-        if (instanceMethod == null) {
+        if (instanceMethod == null)
             throw noInstanceMethod(serializerClass);
-        }
 
         return instanceMethod;
     }
@@ -122,7 +114,7 @@ public class Main {
     private static RuntimeException noInstanceMethod(Class<? extends Serializer<?>> serializerClass) {
         return new RuntimeException("Class: `"
                 + serializerClass.getName()
-                + "` does not have an instance getter method. Your serializer class needs a public, static method that will return a singleton instance of your Serializer. This method also needs to be annotated with `@SerializerInstance` and have the class as its return type");
+                + "` does not have an instance getter method. Your serializer class needs a public, static method that will return a singleton instance of your main.api.Serializer. This method also needs to be annotated with `@main.api.annotations.SerializerInstance` and have the class as its return type");
     }
 
     private static IllegalAccessException instanceMethodNotStatic(Method method) {
@@ -139,7 +131,7 @@ public class Main {
     }
 
     private static RuntimeException multipleInstancesError(Class<? extends Serializer<?>> serializerClass, Method method, Method instanceMethod) {
-        return new RuntimeException("Only one method in the Serializer class is allowed to have a @SerializerInstance annotation. Affected class: `"
+        return new RuntimeException("Only one method in the main.api.Serializer class is allowed to have a @main.api.annotations.SerializerInstance annotation. Affected class: `"
                 + serializerClass.getName()
                 + "`, affected method: `"
                 + method.getName()

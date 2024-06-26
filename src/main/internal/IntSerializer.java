@@ -1,3 +1,10 @@
+package main.internal;
+
+import main.api.Serializer;
+import main.api.annotations.AutoRegisterSerializer;
+import main.api.annotations.SerializerInstance;
+import main.examples.Test;
+
 @AutoRegisterSerializer
 public class IntSerializer extends Serializer<Integer> {
     private static final IntSerializer INSTANCE = new IntSerializer(new Test.SubClassSerializer[]{Test.SubClassSerializer.INSTANCE});

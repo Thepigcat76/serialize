@@ -1,22 +1,25 @@
+package main.examples;
+
+import main.internal.SerializeHelper;
+import main.api.Serializer;
+import main.api.annotations.Serialized;
+import main.api.annotations.SerializerInstance;
+
 public class Test implements AutoCloseable {
     @Serialized
-    public int x;
+    public static int x;
     @Serialized
     public int y;
     @Serialized
     public int z;
 
     public Test() {
-        try {
-            Main.load(this);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
+        SerializeHelper.load(this);
     }
 
     @Override
     public void close() throws Exception {
-        Main.save(this);
+        SerializeHelper.save(this);
     }
 
     public static class SubClass {

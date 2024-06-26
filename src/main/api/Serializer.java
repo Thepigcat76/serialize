@@ -1,3 +1,5 @@
+package main.api;
+
 public abstract class Serializer<T> {
     private final Serializer<?>[] subSerializer;
 
