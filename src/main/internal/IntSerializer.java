@@ -7,20 +7,16 @@ import main.examples.Test;
 
 @AutoRegisterSerializer
 public class IntSerializer extends Serializer<Integer> {
-    private static final IntSerializer INSTANCE = new IntSerializer(new Test.SubClassSerializer[]{Test.SubClassSerializer.INSTANCE});
+    private static final IntSerializer INSTANCE = new IntSerializer();
 
-    public IntSerializer(Serializer<?>[] subSerializer) {
-        super(subSerializer);
+    @Override
+    public int serialize(Integer integer) {
+        return integer;
     }
 
     @Override
-    public int serialize() {
-        return 69;
-    }
-
-    @Override
-    public Integer load() {
-        return 69;
+    public Integer load(int data) {
+        return data;
     }
 
     @SerializerInstance

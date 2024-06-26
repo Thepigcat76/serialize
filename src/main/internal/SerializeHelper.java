@@ -4,7 +4,6 @@ import main.Main;
 import main.api.Serializer;
 import main.api.annotations.Serialized;
 import main.api.annotations.SerializerInstance;
-import main.examples.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -14,34 +13,89 @@ import java.util.Map;
 import java.util.Objects;
 
 public class SerializeHelper {
-    public static void save(Test instance) throws Exception {
-        Field[] fields = instance.getClass().getDeclaredFields();
+    public static void load(Object instance) {
+        try {
+            loadRaw(instance);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void loadRaw(Object instance) throws Exception {
+        Map<String, Integer> loaded = DataManager.INSTANCE.load();
+        System.out.println(loaded);
+        Class<?> testClass = instance.getClass();
+        Field[] fields = testClass.getDeclaredFields();
         for (Field field : fields) {
             if (field.isAnnotationPresent(Serialized.class)) {
-                serializeField(instance, field);
+                for (String loadedFieldName : loaded.keySet()) {
+                    if (Objects.equals(loadedFieldName, field.getName())) {
+                        if (isNotFinal(field)) {
+                            Serialized serialized = field.getAnnotation(Serialized.class);
+                            Class<? extends Serializer<?>> serializerClass = getSerializerClass(field, serialized);
+                            Serializer<?> serializer = getSerializer(getInstanceMethod(serializerClass));
+
+                            if (Modifier.isPrivate(field.getModifiers()))
+                                field.setAccessible(true);
+
+                            try {
+                                int loadedVal = loaded.get(loadedFieldName);
+                                field.set(instance, serializer.load(loadedVal));
+                            } catch (IllegalAccessException e) {
+                                throw new RuntimeException(e);
+                            }
+                        } else throw fieldIsFinalException(field);
+                    }
+                }
             }
         }
     }
 
-    private static void serializeField(Test instance, Field field) throws Exception {
+    public static void save(Object instance) {
+        try {
+            saveRaw(instance);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void saveRaw(Object instance) throws Exception {
+        Field[] fields = instance.getClass().getDeclaredFields();
+        for (Field field : fields)
+            if (field.isAnnotationPresent(Serialized.class))
+                serializeField(instance, field);
+    }
+
+    private static <T> void serializeField(Object instance, Field field) throws Exception {
         Serialized serialized = field.getAnnotation(Serialized.class);
-        Class<? extends Serializer<?>> serializerClass = switch (serialized.value().length) {
+        // Get class of the default Serializer
+        // either from the parameter in the annotation
+        // or from the Default Serializer Map
+        Class<? extends Serializer<?>> serializerClass = getSerializerClass(field, serialized);
+        Method instanceMethod = getInstanceMethod(serializerClass);
+        Serializer<T> serializer = (Serializer<T>) getSerializer(instanceMethod);
+        if (Modifier.isPrivate(field.getModifiers()))
+            field.setAccessible(true);
+        Object i = field.get(instance);
+        DataManager.INSTANCE.save(field.getName(), serializer.serialize((T) i));
+    }
+
+    private static Class<? extends Serializer<?>> getSerializerClass(Field field, Serialized serialized) throws Exception {
+        return switch (serialized.value().length) {
             case 0 -> findDefaultSerializer(field);
             case 1 -> serialized.value()[0];
             default -> throw new Error("Provided more than one serializer for field " + field);
         };
-        Method instanceMethod = getInstanceMethod(serializerClass);
-        Serializer<?> serializer = getCustomSerializer(instanceMethod);
-        int i = field.getInt(instance);
-        DataManager.INSTANCE.save(field.getName(), i);
     }
 
-    private static Serializer<?> getCustomSerializer(Method instanceMethod) {
+    private static Serializer<?> getSerializer(Method instanceMethod) {
         Serializer<?> serializer = null;
         try {
             Object result = instanceMethod.invoke(null);
             if (result instanceof Serializer<?> serializer1) {
                 serializer = serializer1;
+            } else {
+                // TODO: Throw exception when the returned value is not a valid serializer
             }
             return serializer;
         } catch (IllegalAccessException | InvocationTargetException e) {
@@ -61,25 +115,8 @@ public class SerializeHelper {
         return new Exception("Could not get default serializer for type: " + field.getType().getTypeName() + ". Please provide a serializer manually by passing it to the annotation");
     }
 
-    public static void load(Test instance) {
-        Map<String, Integer> loaded = DataManager.INSTANCE.load();
-        System.out.println(loaded);
-        Class<? extends Test> testClass = instance.getClass();
-        Field[] fields = testClass.getDeclaredFields();
-        for (Field field : fields)
-            for (String loadedFieldName : loaded.keySet())
-                if (Objects.equals(loadedFieldName, field.getName()))
-                    if (isNotFinal(field))
-                        try {
-                            field.setInt(instance, loaded.get(loadedFieldName));
-                        } catch (IllegalAccessException e) {
-                            throw new RuntimeException(e);
-                        }
-                    else throw fieldIsFinalError(field);
-    }
-
-    private static IllegalAccessError fieldIsFinalError(Field field) {
-        return new IllegalAccessError("Field: "+field.getName()+" has the final modifier, meaning the saved data cannot be loaded.");
+    private static IllegalAccessException fieldIsFinalException(Field field) {
+        return new IllegalAccessException("Field: " + field.getName() + " has the final modifier, meaning the saved data cannot be loaded.");
     }
 
     private static boolean isNotFinal(Field field) {
